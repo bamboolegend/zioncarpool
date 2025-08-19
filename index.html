@@ -749,36 +749,639 @@
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
-        import { getDatabase, ref, set, get, remove, onValue, push, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js';
+        import { getDatabase, ref, set, get, remove, onValue, push } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js';
 
-        // ⚠️ REPLACE WITH YOUR FIREBASE CONFIG
-const firebaseConfig = {
-  apiKey: "AIzaSyDqVFoYzI4HEAViDkodV8OnLa3YDol_EaY",
-  authDomain: "team-carpool-calendar.firebaseapp.com",
-  databaseURL: "https://team-carpool-calendar-default-rtdb.firebaseio.com",
-  projectId: "team-carpool-calendar",
-  storageBucket: "team-carpool-calendar.firebasestorage.app",
-  messagingSenderId: "415611592346",
-  appId: "1:415611592346:web:4851832b815f75aabd8923",
-  measurementId: "G-G0XVJ7P0X0"
-};
+        // Your Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDqVFoYzI4HEAViDkodV8OnLa3YDol_EaY",
+            authDomain: "team-carpool-calendar.firebaseapp.com",
+            databaseURL: "https://team-carpool-calendar-default-rtdb.firebaseio.com",
+            projectId: "team-carpool-calendar",
+            storageBucket: "team-carpool-calendar.firebasestorage.app",
+            messagingSenderId: "415611592346",
+            appId: "1:415611592346:web:4851832b815f75aabd8923",
+            measurementId: "G-G0XVJ7P0X0"
+        };
+
         // Initialize Firebase
         let app, database;
         let isFirebaseInitialized = false;
         let currentDate = new Date();
         let currentDriverName = '';
         let selectedDay = null;
+        let selectedDateKey = null;
         let calendarData = {};
         let isLoading = false;
         let editingDriver = null;
 
         // Initialize Firebase and app
-        async function initFirebase() {
+        async function updateDriverInFirebase(dateKey, driverId, newName) {
+            if (!isFirebaseInitialized) return false;
+
             try {
-                if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-                    throw new Error("Firebase configuration not set. Please update the firebaseConfig object with your Firebase project details.");
+                showLoading();
+                
+                const dayRef = ref(database, `carpool-calendar/${dateKey}`);
+                const snapshot = await get(dayRef);
+                const dayData = snapshot.val();
+                
+                if (dayData && dayData.drivers) {
+                    const driverIndex = dayData.drivers.findIndex(d => d.id === driverId);
+                    if (driverIndex !== -1) {
+                        dayData.drivers[driverIndex].name = newName;
+                        await set(dayRef, dayData);
+                    }
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('Error updating driver:', error);
+                showError('Failed to update driver: ' + error.message);
+                hideLoading();
+                return false;
+            }
+        }
+
+        async function addCommentToFirebase(dateKey, commentText, authorName) {
+            if (!isFirebaseInitialized) return false;
+
+            try {
+                showLoading();
+                
+                const dayRef = ref(database, `carpool-calendar/${dateKey}`);
+                const snapshot = await get(dayRef);
+                const dayData = snapshot.val() || { drivers: [], comments: [] };
+                
+                if (!dayData.comments) dayData.comments = [];
+                
+                const newComment = {
+                    id: Date.now().toString(),
+                    text: commentText,
+                    author: authorName,
+                    timestamp: new Date().toISOString()
+                };
+                
+                dayData.comments.push(newComment);
+                await set(dayRef, dayData);
+                
+                return true;
+            } catch (error) {
+                console.error('Error adding comment:', error);
+                showError('Failed to add comment: ' + error.message);
+                hideLoading();
+                return false;
+            }
+        }
+
+        function renderCalendar() {
+            const calendar = document.getElementById('calendar');
+            const monthElement = document.getElementById('currentMonth');
+            
+            // Update month display
+            monthElement.textContent = currentDate.toLocaleDateString('en-US', {
+                month: 'long',
+                year: 'numeric'
+            });
+
+            // Clear calendar
+            calendar.innerHTML = '';
+
+            // Add day headers
+            const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayHeaders.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-header';
+                header.textContent = day;
+                calendar.appendChild(header);
+            });
+
+            // Get first day of month and number of days
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            const today = new Date();
+
+            // Add empty cells for days before first day of month
+            for (let i = 0; i < firstDay.getDay(); i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day other-month';
+                calendar.appendChild(emptyDay);
+            }
+
+            // Add days of month
+            for (let day = 1; day <= lastDay.getDate(); day++) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                
+                const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                const dateKey = getDateKey(date);
+                
+                // Check if it's today
+                if (date.toDateString() === today.toDateString()) {
+                    dayElement.classList.add('today');
                 }
 
+                // Add day number
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'day-number';
+                dayNumber.textContent = day;
+                dayElement.appendChild(dayNumber);
+
+                // Add drivers list
+                const driversList = document.createElement('div');
+                driversList.className = 'drivers-list';
+
+                // Show existing drivers
+                const dayData = calendarData[dateKey];
+                if (dayData && dayData.drivers && Array.isArray(dayData.drivers)) {
+                    dayData.drivers.forEach((driver) => {
+                        const driverTag = document.createElement('div');
+                        driverTag.className = 'driver-tag';
+                        if (driver.name === currentDriverName) {
+                            driverTag.classList.add('editable');
+                        }
+                        
+                        const driverName = document.createElement('span');
+                        driverName.textContent = driver.name;
+                        driverTag.appendChild(driverName);
+
+                        const actions = document.createElement('div');
+                        actions.className = 'driver-actions';
+
+                        if (driver.name === currentDriverName) {
+                            const editBtn = document.createElement('button');
+                            editBtn.className = 'action-btn';
+                            editBtn.innerHTML = '✏️';
+                            editBtn.title = 'Edit';
+                            editBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                openEditModal(dateKey, driver.id, driver.name);
+                            };
+                            actions.appendChild(editBtn);
+                        }
+
+                        const removeBtn = document.createElement('button');
+                        removeBtn.className = 'action-btn remove';
+                        removeBtn.innerHTML = '×';
+                        removeBtn.title = 'Remove';
+                        removeBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            removeDriver(dateKey, driver.id);
+                        };
+                        actions.appendChild(removeBtn);
+
+                        driverTag.appendChild(actions);
+                        driversList.appendChild(driverTag);
+                    });
+                }
+
+                // Add "Add Driver" button
+                const addBtn = document.createElement('div');
+                addBtn.className = 'add-driver-btn';
+                addBtn.textContent = '+ Add Driver';
+                addBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openModal(date);
+                };
+                
+                driversList.appendChild(addBtn);
+                dayElement.appendChild(driversList);
+
+                // Add comments section
+                const commentsSection = document.createElement('div');
+                commentsSection.className = 'comments-section';
+                
+                if (dayData && dayData.comments && dayData.comments.length > 0) {
+                    dayData.comments.slice(0, 2).forEach(comment => {
+                        const commentDiv = document.createElement('div');
+                        commentDiv.className = 'comment-item comment-preview';
+                        commentDiv.textContent = `${comment.author}: ${comment.text}`;
+                        commentDiv.onclick = (e) => {
+                            e.stopPropagation();
+                            openDayDetails(date);
+                        };
+                        commentsSection.appendChild(commentDiv);
+                    });
+                    
+                    if (dayData.comments.length > 2) {
+                        const moreComments = document.createElement('div');
+                        moreComments.className = 'comment-item comment-preview';
+                        moreComments.textContent = `+${dayData.comments.length - 2} more comments`;
+                        moreComments.onclick = (e) => {
+                            e.stopPropagation();
+                            openDayDetails(date);
+                        };
+                        commentsSection.appendChild(moreComments);
+                    }
+                }
+
+                const addCommentBtn = document.createElement('button');
+                addCommentBtn.className = 'add-comment-btn';
+                addCommentBtn.textContent = '+ Comment';
+                addCommentBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openDayDetails(date);
+                };
+                commentsSection.appendChild(addCommentBtn);
+
+                dayElement.appendChild(commentsSection);
+
+                // Click handler for day
+                dayElement.onclick = () => {
+                    if (currentDriverName && !isLoading) {
+                        addDriver(dateKey, currentDriverName);
+                    } else if (!currentDriverName) {
+                        alert('Please set your name first!');
+                    }
+                };
+
+                calendar.appendChild(dayElement);
+            }
+        }
+
+        // Add driver
+        window.addDriver = async function(dateKey, driverName) {
+            if (!driverName.trim()) return;
+            await addDriverToFirebase(dateKey, driverName.trim());
+        };
+
+        // Remove driver
+        window.removeDriver = async function(dateKey, driverId) {
+            await removeDriverFromFirebase(dateKey, driverId);
+        };
+
+        // Open add driver modal
+        window.openModal = function(date) {
+            selectedDay = date;
+            document.getElementById('selectedDate').textContent = date.toLocaleDateString();
+            document.getElementById('modalDriverName').value = currentDriverName;
+            document.getElementById('driverModal').classList.add('active');
+            document.getElementById('modalDriverName').focus();
+        };
+
+        // Close add driver modal
+        window.closeModal = function() {
+            document.getElementById('driverModal').classList.remove('active');
+            selectedDay = null;
+        };
+
+        // Add driver from modal
+        window.addDriverToDay = async function() {
+            const driverName = document.getElementById('modalDriverName').value.trim();
+            if (driverName && selectedDay) {
+                const dateKey = getDateKey(selectedDay);
+                const success = await addDriverToFirebase(dateKey, driverName);
+                if (success) {
+                    closeModal();
+                }
+            }
+        };
+
+        // Open day details modal
+        window.openDayDetails = function(date) {
+            selectedDay = date;
+            selectedDateKey = getDateKey(date);
+            document.getElementById('detailsDate').textContent = date.toLocaleDateString();
+            
+            updateDayDetailsModal();
+            document.getElementById('dayDetailsModal').classList.add('active');
+        };
+
+        // Close day details modal
+        window.closeDayDetails = function() {
+            document.getElementById('dayDetailsModal').classList.remove('active');
+            selectedDay = null;
+            selectedDateKey = null;
+        };
+
+        // Update day details modal content
+        function updateDayDetailsModal() {
+            if (!selectedDateKey) return;
+
+            const dayData = calendarData[selectedDateKey] || { drivers: [], comments: [] };
+            
+            // Update drivers list
+            const driversList = document.getElementById('driverDetailsList');
+            driversList.innerHTML = '';
+            
+            if (dayData.drivers && dayData.drivers.length > 0) {
+                dayData.drivers.forEach(driver => {
+                    const driverItem = document.createElement('div');
+                    driverItem.className = 'driver-item';
+                    if (driver.name === currentDriverName) {
+                        driverItem.classList.add('current-user');
+                    }
+                    
+                    const driverName = document.createElement('span');
+                    driverName.className = 'driver-name';
+                    driverName.textContent = driver.name;
+                    driverItem.appendChild(driverName);
+
+                    const actions = document.createElement('div');
+                    if (driver.name === currentDriverName) {
+                        const editBtn = document.createElement('button');
+                        editBtn.className = 'modal-btn primary';
+                        editBtn.style.fontSize = '0.8rem';
+                        editBtn.style.padding = '5px 10px';
+                        editBtn.textContent = 'Edit';
+                        editBtn.onclick = () => openEditModal(selectedDateKey, driver.id, driver.name);
+                        actions.appendChild(editBtn);
+                    }
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'modal-btn danger';
+                    removeBtn.style.fontSize = '0.8rem';
+                    removeBtn.style.padding = '5px 10px';
+                    removeBtn.textContent = 'Remove';
+                    removeBtn.onclick = () => removeDriver(selectedDateKey, driver.id);
+                    actions.appendChild(removeBtn);
+
+                    driverItem.appendChild(actions);
+                    driversList.appendChild(driverItem);
+                });
+            } else {
+                const noDrivers = document.createElement('div');
+                noDrivers.textContent = 'No drivers assigned for this day.';
+                noDrivers.style.color = '#718096';
+                noDrivers.style.fontStyle = 'italic';
+                driversList.appendChild(noDrivers);
+            }
+
+            // Update comments list
+            const commentsList = document.getElementById('commentsList');
+            commentsList.innerHTML = '';
+            
+            if (dayData.comments && dayData.comments.length > 0) {
+                dayData.comments.forEach(comment => {
+                    const commentItem = document.createElement('div');
+                    commentItem.className = 'comment-item-full';
+                    
+                    const commentHeader = document.createElement('div');
+                    commentHeader.className = 'comment-header';
+                    
+                    const author = document.createElement('span');
+                    author.className = 'comment-author';
+                    author.textContent = comment.author;
+                    
+                    const time = document.createElement('span');
+                    time.className = 'comment-time';
+                    time.textContent = new Date(comment.timestamp).toLocaleString();
+                    
+                    commentHeader.appendChild(author);
+                    commentHeader.appendChild(time);
+                    
+                    const commentText = document.createElement('div');
+                    commentText.className = 'comment-text';
+                    commentText.textContent = comment.text;
+                    
+                    commentItem.appendChild(commentHeader);
+                    commentItem.appendChild(commentText);
+                    commentsList.appendChild(commentItem);
+                });
+            } else {
+                const noComments = document.createElement('div');
+                noComments.textContent = 'No comments yet.';
+                noComments.style.color = '#718096';
+                noComments.style.fontStyle = 'italic';
+                commentsList.appendChild(noComments);
+            }
+        }
+
+        // Add comment
+        window.addComment = async function() {
+            if (!currentDriverName) {
+                alert('Please set your name first!');
+                return;
+            }
+
+            const commentText = document.getElementById('newComment').value.trim();
+            if (!commentText) return;
+
+            const success = await addCommentToFirebase(selectedDateKey, commentText, currentDriverName);
+            if (success) {
+                document.getElementById('newComment').value = '';
+                updateDayDetailsModal();
+            }
+        };
+
+        // Open edit driver modal
+        window.openEditModal = function(dateKey, driverId, currentName) {
+            editingDriver = { dateKey, driverId };
+            document.getElementById('editDriverName').value = currentName;
+            document.getElementById('editDriverModal').classList.add('active');
+            document.getElementById('editDriverName').focus();
+        };
+
+        // Close edit modal
+        window.closeEditModal = function() {
+            document.getElementById('editDriverModal').classList.remove('active');
+            editingDriver = null;
+        };
+
+        // Update driver entry
+        window.updateDriverEntry = async function() {
+            if (!editingDriver) return;
+
+            const newName = document.getElementById('editDriverName').value.trim();
+            if (!newName) return;
+
+            const success = await updateDriverInFirebase(editingDriver.dateKey, editingDriver.driverId, newName);
+            if (success) {
+                closeEditModal();
+                if (document.getElementById('dayDetailsModal').classList.contains('active')) {
+                    updateDayDetailsModal();
+                }
+            }
+        };
+
+        // Remove driver entry
+        window.removeDriverEntry = async function() {
+            if (!editingDriver) return;
+
+            const success = await removeDriverFromFirebase(editingDriver.dateKey, editingDriver.driverId);
+            if (success) {
+                closeEditModal();
+                if (document.getElementById('dayDetailsModal').classList.contains('active')) {
+                    updateDayDetailsModal();
+                }
+            }
+        };
+
+        // Export to CSV
+        window.exportToCSV = function() {
+            const csvData = [];
+            csvData.push(['Date', 'Driver', 'Comments Count', 'Added By', 'Added At']);
+
+            Object.keys(calendarData).forEach(dateKey => {
+                const dayData = calendarData[dateKey];
+                const date = new Date(dateKey).toLocaleDateString();
+                
+                if (dayData.drivers && dayData.drivers.length > 0) {
+                    dayData.drivers.forEach(driver => {
+                        csvData.push([
+                            date,
+                            driver.name,
+                            dayData.comments ? dayData.comments.length : 0,
+                            driver.addedBy || driver.name,
+                            new Date(driver.addedAt).toLocaleString()
+                        ]);
+                    });
+                } else {
+                    csvData.push([date, 'No drivers', dayData.comments ? dayData.comments.length : 0, '', '']);
+                }
+            });
+
+            const csvContent = csvData.map(row => row.map(field => `"${field}"`).join(',')).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `carpool-calendar-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        };
+
+        // Export to JSON
+        window.exportToJSON = function() {
+            const exportData = {
+                exportDate: new Date().toISOString(),
+                calendarData: calendarData
+            };
+
+            const jsonContent = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([jsonContent], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `carpool-calendar-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        };
+
+        // Update statistics
+        function updateStats() {
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = '';
+
+            const currentMonth = currentDate.getMonth();
+            const currentYear = currentDate.getFullYear();
+            
+            let totalDays = 0;
+            let daysWithDrivers = 0;
+            let driverCounts = {};
+            let totalDriverSlots = 0;
+            let totalComments = 0;
+
+            // Calculate stats for current month
+            Object.keys(calendarData).forEach(dateKey => {
+                const [year, month, day] = dateKey.split('-').map(Number);
+                if (year === currentYear && month === currentMonth) {
+                    const dayData = calendarData[dateKey];
+                    if (dayData) {
+                        if (dayData.drivers && dayData.drivers.length > 0) {
+                            daysWithDrivers++;
+                            totalDriverSlots += dayData.drivers.length;
+                            
+                            dayData.drivers.forEach(driver => {
+                                driverCounts[driver.name] = (driverCounts[driver.name] || 0) + 1;
+                            });
+                        }
+                        
+                        if (dayData.comments) {
+                            totalComments += dayData.comments.length;
+                        }
+                    }
+                }
+            });
+
+            // Get total days in current month
+            totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            // Create stat cards
+            const stats = [
+                { label: 'Days Covered', value: daysWithDrivers, total: totalDays },
+                { label: 'Total Drivers', value: totalDriverSlots },
+                { label: 'Coverage', value: Math.round((daysWithDrivers / totalDays) * 100) + '%' },
+                { label: 'Unique Drivers', value: Object.keys(driverCounts).length },
+                { label: 'Total Comments', value: totalComments }
+            ];
+
+            stats.forEach(stat => {
+                const card = document.createElement('div');
+                card.className = 'stat-card';
+                card.innerHTML = `
+                    <div class="stat-number">${stat.value}${stat.total ? `/${stat.total}` : ''}</div>
+                    <div class="stat-label">${stat.label}</div>
+                `;
+                statsGrid.appendChild(card);
+            });
+
+            // Add top drivers if any
+            if (Object.keys(driverCounts).length > 0) {
+                const topDriver = Object.entries(driverCounts)
+                    .sort(([,a], [,b]) => b - a)[0];
+                
+                const card = document.createElement('div');
+                card.className = 'stat-card';
+                card.innerHTML = `
+                    <div class="stat-number">${topDriver[1]}</div>
+                    <div class="stat-label">Top Driver: ${topDriver[0]}</div>
+                `;
+                statsGrid.appendChild(card);
+            }
+        }
+
+        // Event listeners
+        document.getElementById('modalDriverName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                window.addDriverToDay();
+            }
+        });
+
+        document.getElementById('driverName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                window.setDriverName();
+            }
+        });
+
+        document.getElementById('newComment').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                window.addComment();
+            }
+        });
+
+        document.getElementById('editDriverName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                window.updateDriverEntry();
+            }
+        });
+
+        // Close modals when clicking outside
+        document.getElementById('driverModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                window.closeModal();
+            }
+        });
+
+        document.getElementById('dayDetailsModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                window.closeDayDetails();
+            }
+        });
+
+        document.getElementById('editDriverModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                window.closeEditModal();
+            }
+        });
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            initFirebase();
+        });
+    </script>
+</body>
+</html> initFirebase() {
+            try {
                 app = initializeApp(firebaseConfig);
                 database = getDatabase(app);
                 
@@ -792,11 +1395,12 @@ const firebaseConfig = {
                 }
                 
                 setupRealtimeListener();
+                renderCalendar();
                 
             } catch (error) {
                 console.error('Firebase initialization error:', error);
                 updateConnectionStatus('disconnected', 'Connection failed: ' + error.message);
-                showError('Failed to connect to database. Please check your Firebase configuration.');
+                showError('Failed to connect to database: ' + error.message);
             }
         }
 
@@ -943,10 +1547,4 @@ const firebaseConfig = {
             }
         }
 
-        async function updateDriverInFirebase(dateKey, driverId, newName) {
-            if (!isFirebaseInitialized) return false;
-
-            try {
-                showLoading();
-                
-                const dayRef = ref(database, `carpool-calendar
+        async function
