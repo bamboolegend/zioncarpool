@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Carpool Calendar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .connection-status.connected {
+            background: rgba(72, 187, 120, 0.1);
+            color: #38a169;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(229, 62, 62, 0.1);
+            color: #e53e3e;
+        }
+
+        .connection-status.loading {
+            background: rgba(237, 137, 54, 0.1);
+            color: #dd6b20;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .month-nav {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .nav-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .current-month {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #4a5568;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .driver-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-left: auto;
+        }
+
+        .driver-input input {
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .driver-input input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .export-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .export-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .calendar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+            margin-top: 20px;
+        }
+
+        .calendar-header {
+            background: linear-gradient(135deg, #4a5568, #2d3748);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+
+        .calendar-day {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            min-height: 140px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .calendar-day:hover {
+            background: #edf2f7;
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .calendar-day.other-month {
+            background: #f1f5f9;
+            color: #a0aec0;
+        }
+
+        .calendar-day.today {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: #5a67d8;
+        }
+
+        .day-number {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .drivers-list {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .driver-tag {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .driver-tag:hover {
+            transform: scale(1.02);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .driver-tag.editable {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .driver-actions {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .action-btn.remove:hover {
+            background: #e53e3e;
+        }
+
+        .add-driver-btn {
+            background: rgba(102, 126, 234, 0.1);
+            border: 2px dashed #667eea;
+            color: #667eea;
+            padding: 6px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+            margin-bottom: 4px;
+        }
+
+        .add-driver-btn:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: scale(1.02);
+        }
+
+        .comments-section {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 6px;
+            font-size: 0.75rem;
+        }
+
+        .comment-item {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 4px 6px;
+            margin: 2px 0;
+            border-radius: 6px;
+            word-wrap: break-word;
+            max-height: 40px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .comment-preview {
+            cursor: pointer;
+        }
+
+        .add-comment-btn {
+            background: transparent;
+            border: 1px dashed #667eea;
+            color: #667eea;
+            padding: 3px 6px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 2px;
+        }
+
+        .add-comment-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .stats {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: scale(0.9) translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #4a5568;
+            text-align: center;
+        }
+
+        .modal input, .modal textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .modal textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn.primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .modal-btn.secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .modal-btn.danger {
+            background: linear-gradient(135deg, #e53e3e, #c53030);
+            color: white;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .day-details {
+            margin-bottom: 20px;
+        }
+
+        .detail-section {
+            margin-bottom: 20px;
+        }
+
+        .detail-section h4 {
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .driver-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .driver-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .driver-item.current-user {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: #667eea;
+        }
+
+        .driver-name {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .comment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .comment-item-full {
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        .comment-time {
+            color: #718096;
+            font-size: 0.8rem;
+        }
+
+        .comment-text {
+            color: #2d3748;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            z-index: 100;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: rgba(229, 62, 62, 0.1);
+            color: #e53e3e;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid rgba(229, 62, 62, 0.2);
+            text-align: center;
+        }
+
+        .data-retention-info {
+            background: rgba(102, 126, 234, 0.1);
+            color: #4a5568;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .calendar-grid {
+                font-size: 0.8rem;
+            }
+            
+            .calendar-day {
+                min-height: 120px;
+                padding: 6px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .driver-input, .export-controls {
+                margin-left: 0;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .modal-content {
+                padding: 20px;
+                margin: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗 Team Carpool Calendar</h1>
+            <p>Coordinate your team's carpooling schedule effortlessly</p>
+            <div class="connection-status loading" id="connectionStatus">
+                <div class="status-dot"></div>
+                <span>Connecting to database...</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="month-nav">
+                <button class="nav-btn" onclick="changeMonth(-1)" id="prevBtn">← Previous</button>
+                <div class="current-month" id="currentMonth"></div>
+                <button class="nav-btn" onclick="changeMonth(1)" id="nextBtn">Next →</button>
+            </div>
+            <div class="driver-input">
+                <input type="text" id="driverName" placeholder="Enter your name" maxlength="20">
+                <button class="nav-btn" onclick="setDriverName()" id="setNameBtn">Set Name</button>
+            </div>
+            <div class="export-controls">
+                <button class="export-btn" onclick="exportToCSV()">📊 Export CSV</button>
+                <button class="export-btn" onclick="exportToJSON()">📋 Export JSON</button>
+            </div>
+        </div>
+
+        <div class="calendar">
+            <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+                <div class="loading-spinner"></div>
+            </div>
+            <div class="calendar-grid" id="calendar"></div>
+        </div>
+
+        <div class="stats">
+            <h3>📊 Monthly Statistics</h3>
+            <div class="stats-grid" id="statsGrid"></div>
+        </div>
+
+        <div class="data-retention-info">
+            <strong>📅 Data Retention:</strong> Firebase free tier keeps your data indefinitely unless you delete the project. 
+            Your carpool schedule will remain accessible as long as the Firebase project is active.
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+    </div>
+
+    <!-- Add Driver Modal -->
+    <div class="modal" id="driverModal">
+        <div class="modal-content">
+            <h3>Add Driver for <span id="selectedDate"></span></h3>
+            <input type="text" id="modalDriverName" placeholder="Driver name">
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="addDriverToDay()">Add Driver</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day Details Modal -->
+    <div class="modal" id="dayDetailsModal">
+        <div class="modal-content">
+            <h3>📅 <span id="detailsDate"></span></h3>
+            
+            <div class="detail-section">
+                <h4>👥 Drivers</h4>
+                <div class="driver-list" id="driverDetailsList"></div>
+            </div>
+
+            <div class="detail-section">
+                <h4>💬 Comments</h4>
+                <div class="comment-list" id="commentsList"></div>
+                <textarea id="newComment" placeholder="Add a comment..." rows="3"></textarea>
+                <button class="modal-btn primary" onclick="addComment()">Add Comment</button>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" onclick="closeDayDetails()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Driver Modal -->
+    <div class="modal" id="editDriverModal">
+        <div class="modal-content">
+            <h3>Edit Driver Entry</h3>
+            <input type="text" id="editDriverName" placeholder="Driver name">
+            <div class="modal-buttons">
+                <button class="modal-btn danger" onclick="removeDriverEntry()">Remove</button>
+                <button class="modal-btn secondary" onclick="closeEditModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="updateDriverEntry()">Update</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+        import { getDatabase, ref, set, get, remove, onValue, push, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js';
+
+        // ⚠️ REPLACE WITH YOUR FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyDqVFoYzI4HEAViDkodV8OnLa3YDol_EaY",
+  authDomain: "team-carpool-calendar.firebaseapp.com",
+  databaseURL: "https://team-carpool-calendar-default-rtdb.firebaseio.com",
+  projectId: "team-carpool-calendar",
+  storageBucket: "team-carpool-calendar.firebasestorage.app",
+  messagingSenderId: "415611592346",
+  appId: "1:415611592346:web:4851832b815f75aabd8923",
+  measurementId: "G-G0XVJ7P0X0"
+};
+        // Initialize Firebase
+        let app, database;
+        let isFirebaseInitialized = false;
+        let currentDate = new Date();
+        let currentDriverName = '';
+        let selectedDay = null;
+        let calendarData = {};
+        let isLoading = false;
+        let editingDriver = null;
+
+        // Initialize Firebase and app
+        async function initFirebase() {
+            try {
+                if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+                    throw new Error("Firebase configuration not set. Please update the firebaseConfig object with your Firebase project details.");
+                }
+
+                app = initializeApp(firebaseConfig);
+                database = getDatabase(app);
+                
+                updateConnectionStatus('connected', 'Connected to database');
+                isFirebaseInitialized = true;
+                
+                const savedName = localStorage.getItem('driverName');
+                if (savedName) {
+                    currentDriverName = savedName;
+                    document.getElementById('driverName').value = savedName;
+                }
+                
+                setupRealtimeListener();
+                
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                updateConnectionStatus('disconnected', 'Connection failed: ' + error.message);
+                showError('Failed to connect to database. Please check your Firebase configuration.');
+            }
+        }
+
+        function updateConnectionStatus(status, message) {
+            const statusElement = document.getElementById('connectionStatus');
+            statusElement.className = `connection-status ${status}`;
+            statusElement.querySelector('span').textContent = message;
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 10000);
+        }
+
+        function setupRealtimeListener() {
+            if (!isFirebaseInitialized) return;
+            
+            const calendarRef = ref(database, 'carpool-calendar');
+            onValue(calendarRef, (snapshot) => {
+                const data = snapshot.val();
+                calendarData = data || {};
+                renderCalendar();
+                updateStats();
+                hideLoading();
+            }, (error) => {
+                console.error('Database read error:', error);
+                showError('Error reading from database: ' + error.message);
+                hideLoading();
+            });
+        }
+
+        function showLoading() {
+            isLoading = true;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            const buttons = document.querySelectorAll('.nav-btn, .export-btn');
+            buttons.forEach(btn => btn.disabled = true);
+        }
+
+        function hideLoading() {
+            isLoading = false;
+            document.getElementById('loadingOverlay').style.display = 'none';
+            const buttons = document.querySelectorAll('.nav-btn, .export-btn');
+            buttons.forEach(btn => btn.disabled = false);
+        }
+
+        window.setDriverName = function() {
+            const nameInput = document.getElementById('driverName');
+            const name = nameInput.value.trim();
+            if (name) {
+                currentDriverName = name;
+                localStorage.setItem('driverName', name);
+                alert(`Welcome, ${name}! Click on any day to add yourself as a driver.`);
+            }
+        };
+
+        window.changeMonth = function(direction) {
+            if (isLoading) return;
+            currentDate.setMonth(currentDate.getMonth() + direction);
+            renderCalendar();
+            updateStats();
+        };
+
+        function getDateKey(date) {
+            return `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        async function addDriverToFirebase(dateKey, driverName) {
+            if (!isFirebaseInitialized) {
+                showError('Database not connected. Please refresh the page.');
+                return false;
+            }
+
+            try {
+                showLoading();
+                
+                const dayRef = ref(database, `carpool-calendar/${dateKey}`);
+                const snapshot = await get(dayRef);
+                const dayData = snapshot.val() || { drivers: [], comments: [] };
+                
+                if (!dayData.drivers) dayData.drivers = [];
+                if (!dayData.comments) dayData.comments = [];
+                
+                // Check if driver already exists
+                const existingDriver = dayData.drivers.find(d => d.name === driverName);
+                if (existingDriver) {
+                    alert(`${driverName} is already driving on this day!`);
+                    hideLoading();
+                    return false;
+                }
+                
+                // Add new driver with timestamp and ID
+                const newDriver = {
+                    id: Date.now().toString(),
+                    name: driverName,
+                    addedAt: new Date().toISOString(),
+                    addedBy: driverName
+                };
+                
+                dayData.drivers.push(newDriver);
+                await set(dayRef, dayData);
+                
+                return true;
+            } catch (error) {
+                console.error('Error adding driver:', error);
+                showError('Failed to add driver: ' + error.message);
+                hideLoading();
+                return false;
+            }
+        }
+
+        async function removeDriverFromFirebase(dateKey, driverId) {
+            if (!isFirebaseInitialized) {
+                showError('Database not connected. Please refresh the page.');
+                return false;
+            }
+
+            try {
+                showLoading();
+                
+                const dayRef = ref(database, `carpool-calendar/${dateKey}`);
+                const snapshot = await get(dayRef);
+                const dayData = snapshot.val();
+                
+                if (dayData && dayData.drivers) {
+                    dayData.drivers = dayData.drivers.filter(d => d.id !== driverId);
+                    
+                    if (dayData.drivers.length === 0 && (!dayData.comments || dayData.comments.length === 0)) {
+                        await remove(dayRef);
+                    } else {
+                        await set(dayRef, dayData);
+                    }
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('Error removing driver:', error);
+                showError('Failed to remove driver: ' + error.message);
+                hideLoading();
+                return false;
+            }
+        }
+
+        async function updateDriverInFirebase(dateKey, driverId, newName) {
+            if (!isFirebaseInitialized) return false;
+
+            try {
+                showLoading();
+                
+                const dayRef = ref(database, `carpool-calendar
