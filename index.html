@@ -1593,15 +1593,16 @@ if (driver.name === currentDriverName || isOwner) {
     editBtn.textContent = 'Edit';
     editBtn.onclick = () => openEditModal(selectedDateKey, driver.id, driver.name);
     actions.appendChild(editBtn);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'modal-btn danger';
+    removeBtn.style.fontSize = '0.8rem';
+    removeBtn.style.padding = '5px 10px';
+    removeBtn.textContent = 'Remove';
+    removeBtn.onclick = () => removeDriver(selectedDateKey, driver.id);
+    actions.appendChild(removeBtn);
 }
 
-                    const removeBtn = document.createElement('button');
-                    removeBtn.className = 'modal-btn danger';
-                    removeBtn.style.fontSize = '0.8rem';
-                    removeBtn.style.padding = '5px 10px';
-                    removeBtn.textContent = 'Remove';
-                    removeBtn.onclick = () => removeDriver(selectedDateKey, driver.id);
-                    actions.appendChild(removeBtn);
 
                     driverItem.appendChild(actions);
                     driversList.appendChild(driverItem);
@@ -1617,33 +1618,52 @@ if (driver.name === currentDriverName || isOwner) {
             const commentsList = document.getElementById('commentsList');
             commentsList.innerHTML = '';
             
-            if (dayData.comments && dayData.comments.length > 0) {
-                dayData.comments.forEach(comment => {
-                    const commentItem = document.createElement('div');
-                    commentItem.className = 'comment-item-full';
-                    
-                    const commentHeader = document.createElement('div');
-                    commentHeader.className = 'comment-header';
-                    
-                    const author = document.createElement('span');
-                    author.className = 'comment-author';
-                    author.textContent = comment.author;
-                    
-                    const time = document.createElement('span');
-                    time.className = 'comment-time';
-                    time.textContent = new Date(comment.timestamp).toLocaleString();
-                    
-                    commentHeader.appendChild(author);
-                    commentHeader.appendChild(time);
-                    
-                    const commentText = document.createElement('div');
-                    commentText.className = 'comment-text';
-                    commentText.textContent = comment.text;
-                    
-                    commentItem.appendChild(commentHeader);
-                    commentItem.appendChild(commentText);
-                    commentsList.appendChild(commentItem);
-                });
+if (dayData.comments && dayData.comments.length > 0) {
+    dayData.comments.forEach(comment => {
+        const commentItem = document.createElement('div');
+        commentItem.className = 'comment-item-full';
+        
+        const commentHeader = document.createElement('div');
+        commentHeader.className = 'comment-header';
+        
+        const leftSide = document.createElement('div');
+        leftSide.style.display = 'flex';
+        leftSide.style.flexDirection = 'column';
+        
+        const author = document.createElement('span');
+        author.className = 'comment-author';
+        author.textContent = comment.author;
+        
+        const time = document.createElement('span');
+        time.className = 'comment-time';
+        time.textContent = new Date(comment.timestamp).toLocaleString();
+        
+        leftSide.appendChild(author);
+        leftSide.appendChild(time);
+        
+        commentHeader.appendChild(leftSide);
+        
+        // Add remove button for owner or comment author
+        if (comment.author === currentDriverName || isOwner) {
+            const removeCommentBtn = document.createElement('button');
+            removeCommentBtn.className = 'modal-btn danger';
+            removeCommentBtn.style.fontSize = '0.7rem';
+            removeCommentBtn.style.padding = '3px 6px';
+            removeCommentBtn.textContent = 'Remove';
+            removeCommentBtn.onclick = () => removeComment(selectedDateKey, comment.id);
+            commentHeader.appendChild(removeCommentBtn);
+        }
+        
+        const commentText = document.createElement('div');
+        commentText.className = 'comment-text';
+        commentText.textContent = comment.text;
+        
+        commentItem.appendChild(commentHeader);
+        commentItem.appendChild(commentText);
+        commentsList.appendChild(commentItem);
+    });
+
+
             } else {
                 const noComments = document.createElement('div');
                 noComments.textContent = 'No comments yet.';
@@ -1906,6 +1926,35 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('ownerBtn').classList.add('owner');
     }
 });
+
+window.removeComment = async function(dateKey, commentId) {
+    if (!isFirebaseInitialized) return false;
+
+    try {
+        const dayRef = ref(database, `carpool-calendar/${dateKey}`);
+        const snapshot = await get(dayRef);
+        const dayData = snapshot.val();
+        
+        if (dayData && dayData.comments) {
+            dayData.comments = dayData.comments.filter(c => c.id !== commentId);
+            
+            if (dayData.comments.length === 0 && (!dayData.drivers || dayData.drivers.length === 0)) {
+                await remove(dayRef);
+            } else {
+                await set(dayRef, dayData);
+            }
+            
+            updateDayDetailsModal(); // Refresh the modal
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Error removing comment:', error);
+        alert('Failed to remove comment: ' + error.message);
+        return false;
+    }
+};
+
 
     </script>
 </body>
