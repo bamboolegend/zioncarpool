@@ -160,6 +160,9 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
+.nav-btn.owner {
+    background: linear-gradient(135deg, #e53e3e, #c53030);
+}
         .export-controls {
             display: flex;
             gap: 8px;
@@ -782,6 +785,17 @@
                 min-height: 10px;
             }
 
+.comments-section.has-comments {
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 6px;
+    padding: 6px;
+}
+
+.calendar-day.weekend .comments-section.has-comments {
+    padding: 3px;
+}
+
             .modal {
                 align-items: flex-start;
                 padding: 20px 10px;
@@ -1021,7 +1035,7 @@
                 <input type="text" id="driverName" placeholder="Enter your name" maxlength="20">
                 <button class="nav-btn" onclick="setDriverName()">Set Name</button>
             </div>
-
+	    <button class="nav-btn" onclick="setAsOwner()" id="ownerBtn">Set as Website Owner</button>
             <div class="export-controls">
                 <button class="export-btn" onclick="exportToCSV()">📊 Export CSV</button>
                 <button class="export-btn" onclick="exportToJSON()">📋 Export JSON</button>
@@ -1362,7 +1376,7 @@
                     dayData.drivers.forEach((driver) => {
                         const driverTag = document.createElement('div');
                         driverTag.className = 'driver-tag';
-                        if (driver.name === currentDriverName) {
+                       if (driver.name === currentDriverName || isOwner) {
                             driverTag.classList.add('editable');
                         }
                         
@@ -1416,6 +1430,7 @@
                 commentsSection.className = 'comments-section';
                 
                 if (dayData && dayData.comments && dayData.comments.length > 0) {
+                    commentsSection.classList.add('has-comments');
                     dayData.comments.slice(0, 2).forEach(comment => {
                         const commentDiv = document.createElement('div');
                         commentDiv.className = 'comment-item';
@@ -1828,6 +1843,34 @@
             
             initFirebase();
         });
+
+
+let isOwner = false;
+const OWNER_PASSWORD = "carpool2024"; // Change this to your preferred password
+
+window.setAsOwner = function() {
+    const password = prompt("Enter owner password:");
+    if (password === OWNER_PASSWORD) {
+        isOwner = true;
+        localStorage.setItem('isOwner', 'true');
+        document.getElementById('ownerBtn').textContent = 'Owner Mode';
+        document.getElementById('ownerBtn').classList.add('owner');
+        alert('Owner mode activated! You can now remove any driver or comment.');
+        renderCalendar(); // Refresh to show remove buttons
+    } else {
+        alert('Incorrect password');
+    }
+};
+
+// Check owner status on page load
+document.addEventListener('DOMContentLoaded', function() {
+    if (localStorage.getItem('isOwner') === 'true') {
+        isOwner = true;
+        document.getElementById('ownerBtn').textContent = 'Owner Mode';
+        document.getElementById('ownerBtn').classList.add('owner');
+    }
+});
+
     </script>
 </body>
 </html>
