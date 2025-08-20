@@ -250,6 +250,8 @@
             display: flex;
             flex-direction: column;
             touch-action: manipulation;
+    	    min-width: 0; /* Prevents flex items from growing beyond grid constraints */
+    	    overflow: hidden; /* Prevents content from expanding the cell */
         }
 
         .calendar-day.weekend {
@@ -689,19 +691,36 @@
                 white-space: nowrap;
             }
 
-            .driver-input {
-                margin-left: 0;
-                width: 100%;
-                max-width: 350px;
-                margin: 0 auto;
-                justify-content: center;
-            }
+.driver-input {
+    margin-left: 0;
+    width: 100%;
+    max-width: 350px;
+    margin: 0 auto;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+}
 
-            .driver-input input {
-                flex: 1;
-                max-width: 200px;
-                min-width: 120px;
-            }
+.driver-input input {
+    width: 100%;
+    max-width: 300px;
+    min-width: 200px;
+}
+
+.button-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+}
+
+.button-row .nav-btn {
+    flex: 1;
+    max-width: 140px;
+    font-size: 0.65rem;
+    padding: 8px 6px;
+}
+
 
             .export-controls {
                 width: 100%;
@@ -717,10 +736,11 @@
 
 
             .calendar-grid {
-                gap: 1px;
-                grid-template-columns: 0.6fr 1.4fr 1.4fr 1.4fr 1.4fr 1.4fr 0.6fr;
-                margin: 10px 0;
-                width: 100%;
+    gap: 1px;
+    grid-template-columns: 0.4fr 1.2fr 1.2fr 1.2fr 1.2fr 1.2fr 0.4fr;
+    margin: 10px 0;
+    width: 100%;
+
             }
 
             .calendar-header {
@@ -845,10 +865,11 @@
                 padding: 8px;
             }
 
-            .calendar-grid {
-                grid-template-columns: 0.6fr 1.4fr 1.4fr 1.4fr 1.4fr 1.4fr 0.6fr;
-                gap: 1px;
-            }
+.calendar-grid {
+    grid-template-columns: 0.3fr 1.15fr 1.15fr 1.15fr 1.15fr 1.15fr 0.3fr;
+    gap: 1px;
+}
+
 
             .calendar-header {
                 padding: 3px 1px;
@@ -934,10 +955,10 @@
         }
 
         @media (max-width: 320px) {
-            .calendar-grid {
-                grid-template-columns: 0.6fr 1.4fr 1.4fr 1.4fr 1.4fr 1.4fr 0.6fr;
-                gap: 0.5px;
-            }
+.calendar-grid {
+    grid-template-columns: 0.25fr 1.12fr 1.12fr 1.12fr 1.12fr 1.12fr 0.25fr;
+    gap: 0.5px;
+}
 
             .calendar-header {
                 padding: 2px 0.5px;
@@ -1031,11 +1052,14 @@
                 <div class="current-month" id="currentMonth"></div>
                 <button class="nav-btn" onclick="changeMonth(1)">Next →</button>
             </div>
-            <div class="driver-input">
-                <input type="text" id="driverName" placeholder="Enter your name" maxlength="20">
-                <button class="nav-btn" onclick="setDriverName()">Set Name</button>
-            </div>
-	    <button class="nav-btn" onclick="setAsOwner()" id="ownerBtn">Set as Website Owner</button>
+
+<div class="driver-input">
+    <input type="text" id="driverName" placeholder="Enter your name" maxlength="20">
+    <div class="button-row">
+        <button class="nav-btn" onclick="setDriverName()">Set Name</button>
+        <button class="nav-btn" onclick="setAsOwner()" id="ownerBtn">Set as Website Owner</button>
+    </div>
+</div>
             <div class="export-controls">
                 <button class="export-btn" onclick="exportToCSV()">📊 Export CSV</button>
                 <button class="export-btn" onclick="exportToJSON()">📋 Export JSON</button>
@@ -1376,6 +1400,10 @@
                     dayData.drivers.forEach((driver) => {
                         const driverTag = document.createElement('div');
                         driverTag.className = 'driver-tag';
+console.log('Checking permissions - currentDriverName:', currentDriverName, 'driver.name:', driver.name, 'isOwner:', isOwner);
+if (driver.name === currentDriverName || isOwner) {
+    driverTag.classList.add('editable');
+}
                        if (driver.name === currentDriverName || isOwner) {
                             driverTag.classList.add('editable');
                         }
@@ -1389,6 +1417,7 @@
                         actions.className = 'driver-actions';
 
 if (driver.name === currentDriverName || isOwner) {
+    console.log('Creating edit/remove buttons for:', driver.name, 'isOwner:', isOwner);
     const editBtn = document.createElement('button');
     editBtn.className = 'action-btn';
     editBtn.innerHTML = '✏️';
@@ -1415,15 +1444,18 @@ if (driver.name === currentDriverName || isOwner) {
                     });
                 }
 
-                const addBtn = document.createElement('div');
-                addBtn.className = 'add-driver-btn';
-                addBtn.textContent = '+ Add Driver';
-                addBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    openModal(date);
-                };
-                
-                driversList.appendChild(addBtn);
+if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+    const addBtn = document.createElement('div');
+    addBtn.className = 'add-driver-btn';
+    addBtn.textContent = '+ Add Driver';
+    addBtn.onclick = (e) => {
+        e.stopPropagation();
+        openModal(date);
+    };
+    
+    driversList.appendChild(addBtn);
+}
+
                 dayElement.appendChild(driversList);
 
                 const commentsSection = document.createElement('div');
@@ -1454,24 +1486,28 @@ if (driver.name === currentDriverName || isOwner) {
                     }
                 }
 
-                const addCommentBtn = document.createElement('button');
-                addCommentBtn.className = 'add-comment-btn';
-                addCommentBtn.textContent = '+ Comment';
-                addCommentBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    openDayDetails(date);
-                };
-                commentsSection.appendChild(addCommentBtn);
+if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+    const addCommentBtn = document.createElement('button');
+    addCommentBtn.className = 'add-comment-btn';
+    addCommentBtn.textContent = '+ Comment';
+    addCommentBtn.onclick = (e) => {
+        e.stopPropagation();
+        openDayDetails(date);
+    };
+    commentsSection.appendChild(addCommentBtn);
+}
 
                 dayElement.appendChild(commentsSection);
 
-                dayElement.onclick = () => {
-                    if (currentDriverName) {
-                        addDriver(dateKey, currentDriverName);
-                    } else {
-                        alert('Please set your name first!');
-                    }
-                };
+if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+    dayElement.onclick = () => {
+        if (currentDriverName) {
+            addDriver(dateKey, currentDriverName);
+        } else {
+            alert('Please set your name first!');
+        }
+    };
+}
 
                 calendar.appendChild(dayElement);
             }
@@ -1549,15 +1585,15 @@ if (driver.name === currentDriverName || isOwner) {
                     driverItem.appendChild(driverName);
 
                     const actions = document.createElement('div');
-                    if (driver.name === currentDriverName) {
-                        const editBtn = document.createElement('button');
-                        editBtn.className = 'modal-btn primary';
-                        editBtn.style.fontSize = '0.8rem';
-                        editBtn.style.padding = '5px 10px';
-                        editBtn.textContent = 'Edit';
-                        editBtn.onclick = () => openEditModal(selectedDateKey, driver.id, driver.name);
-                        actions.appendChild(editBtn);
-                    }
+if (driver.name === currentDriverName || isOwner) {
+    const editBtn = document.createElement('button');
+    editBtn.className = 'modal-btn primary';
+    editBtn.style.fontSize = '0.8rem';
+    editBtn.style.padding = '5px 10px';
+    editBtn.textContent = 'Edit';
+    editBtn.onclick = () => openEditModal(selectedDateKey, driver.id, driver.name);
+    actions.appendChild(editBtn);
+}
 
                     const removeBtn = document.createElement('button');
                     removeBtn.className = 'modal-btn danger';
