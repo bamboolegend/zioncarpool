@@ -224,7 +224,7 @@
 
         .calendar-grid {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: 0.6fr 1.4fr 1.4fr 1.4fr 1.4fr 1.4fr 0.6fr;
             gap: 3px;
             margin-top: 20px;
         }
@@ -718,7 +718,7 @@
 
             .calendar-grid {
                 gap: 1px;
-                grid-template-columns: 0.25fr 1.75fr 1.75fr 1.75fr 1.75fr 1.75fr 0.25fr;
+                grid-template-columns: 0.6fr 1.4fr 1.4fr 1.4fr 1.4fr 1.4fr 0.6fr;
                 margin: 10px 0;
                 width: 100%;
             }
@@ -789,11 +789,11 @@
     background: rgba(102, 126, 234, 0.1);
     border: 1px solid rgba(102, 126, 234, 0.3);
     border-radius: 6px;
-    padding: 6px;
+    margin: 2px;
 }
 
 .calendar-day.weekend .comments-section.has-comments {
-    padding: 3px;
+    margin: 1px;
 }
 
             .modal {
@@ -846,7 +846,7 @@
             }
 
             .calendar-grid {
-                grid-template-columns: 0.25fr 1.75fr 1.75fr 1.75fr 1.75fr 1.75fr 0.25fr;
+                grid-template-columns: 0.6fr 1.4fr 1.4fr 1.4fr 1.4fr 1.4fr 0.6fr;
                 gap: 1px;
             }
 
@@ -935,7 +935,7 @@
 
         @media (max-width: 320px) {
             .calendar-grid {
-                grid-template-columns: 0.25fr 1.75fr 1.75fr 1.75fr 1.75fr 1.75fr 0.25fr;
+                grid-template-columns: 0.6fr 1.4fr 1.4fr 1.4fr 1.4fr 1.4fr 0.6fr;
                 gap: 0.5px;
             }
 
