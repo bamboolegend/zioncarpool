@@ -1388,27 +1388,27 @@
                         const actions = document.createElement('div');
                         actions.className = 'driver-actions';
 
-                        if (driver.name === currentDriverName) {
-                            const editBtn = document.createElement('button');
-                            editBtn.className = 'action-btn';
-                            editBtn.innerHTML = '✏️';
-                            editBtn.title = 'Edit';
-                            editBtn.onclick = (e) => {
-                                e.stopPropagation();
-                                openEditModal(dateKey, driver.id, driver.name);
-                            };
-                            actions.appendChild(editBtn);
-                        }
+if (driver.name === currentDriverName || isOwner) {
+    const editBtn = document.createElement('button');
+    editBtn.className = 'action-btn';
+    editBtn.innerHTML = '✏️';
+    editBtn.title = 'Edit';
+    editBtn.onclick = (e) => {
+        e.stopPropagation();
+        openEditModal(dateKey, driver.id, driver.name);
+    };
+    actions.appendChild(editBtn);
 
-                        const removeBtn = document.createElement('button');
-                        removeBtn.className = 'action-btn remove';
-                        removeBtn.innerHTML = '×';
-                        removeBtn.title = 'Remove';
-                        removeBtn.onclick = (e) => {
-                            e.stopPropagation();
-                            removeDriver(dateKey, driver.id);
-                        };
-                        actions.appendChild(removeBtn);
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'action-btn remove';
+    removeBtn.innerHTML = '×';
+    removeBtn.title = 'Remove';
+    removeBtn.onclick = (e) => {
+        e.stopPropagation();
+        removeDriver(dateKey, driver.id);
+    };
+    actions.appendChild(removeBtn);
+}
 
                         driverTag.appendChild(actions);
                         driversList.appendChild(driverTag);
