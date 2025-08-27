@@ -99,6 +99,8 @@
             gap: 15px;
         }
 
+
+
         .nav-btn {
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
@@ -1107,6 +1109,117 @@
 }
 .stats { margin-bottom: 0; }
 
+
+/* --- Controls layout refresh --- */
+.controls {
+    display: block;
+    gap: 0; /* reset: row layout handled by .controls-row */
+}
+
+.controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.controls-left, .controls-right {
+    display: flex;
+    align-items: center;
+    flex: 1 1 420px; /* symmetrical wrap; each takes up to half when space allows */
+}
+
+.controls-left {
+    justify-content: flex-start;
+}
+
+.controls-right {
+    justify-content: flex-end;
+}
+
+.month-nav-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.controls .driver-note {
+    margin: 10px 0 0 0; /* note directly under the row */
+}
+
+/* When space is tight, let left and right drop to two neat rows */
+@media (max-width: 900px) {
+    .controls-left, .controls-right {
+        flex: 1 1 100%;
+    }
+    .controls-right {
+        justify-content: center; /* aesthetically symmetrical in two lines */
+    }
+    .controls-left {
+        justify-content: center;
+    }
+    .controls .driver-input {
+        flex-direction: row;
+        gap: 10px;
+    }
+}
+
+/* Fine-tune very small screens */
+@media (max-width: 480px) {
+    .controls .driver-input {
+        flex-direction: column;
+        align-items: center;
+    }
+    .controls .button-row {
+        width: 100%;
+        justify-content: center;
+    }
+    .export-controls {
+        justify-content: center;
+    }
+}
+
+
+/* --- Adjust input+buttons alignment in left group --- */
+.controls-left {
+    gap: 12px;
+}
+
+.controls-left input {
+    padding: 6px 10px;
+    border: 2px solid #e2e8f0;
+    border-radius: 20px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: white;
+    min-height: 44px;
+}
+
+.controls-left input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+
+/* --- Keep input + buttons in one horizontal row that wraps if needed --- */
+.controls-left {
+    flex-wrap: wrap;
+}
+
+.controls-left input {
+    flex: 1 1 auto;
+    min-width: 180px;
+}
+
+.controls-left .button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 </style>
 </head>
 <body>
@@ -1121,28 +1234,34 @@
         </div>
 
         <div class="controls">
-            <div class="month-nav">
-                <button class="nav-btn" onclick="changeMonth(-1)">← Previous</button>
-                <div class="current-month" id="currentMonth"></div>
-                <button class="nav-btn" onclick="changeMonth(1)">Next →</button>
-            </div>
 
-            <div class="driver-input">
-                <input type="text" id="driverName" placeholder="Enter your name" maxlength="20">
-                <div class="button-row">
-                    <button class="nav-btn" onclick="setDriverName()">Set Name</button>
-                    <button class="nav-btn" onclick="setAsOwner()" id="ownerBtn">Set as Website Owner</button>
+            <div class="controls-row">
+                <div class="controls-left">
+                    <input type="text" id="driverName" placeholder="Enter your name" maxlength="20">
+                    <div class="button-row">
+                        <button class="nav-btn" onclick="setDriverName()">Set Name</button>
+                        <button class="nav-btn" onclick="setAsOwner()" id="ownerBtn">Set as Website Owner</button>
+                    </div>
                 </div>
-            </div>
-            <div class="export-controls">
-                <button class="export-btn" onclick="exportToCSV()">📊 Export CSV</button>
-                <button class="export-btn" onclick="exportToJSON()">📋 Export JSON</button>
+                <div class="controls-right">
+                    <div class="export-controls">
+                        <button class="export-btn" onclick="exportToCSV()">📊 Export CSV</button>
+                        <button class="export-btn" onclick="exportToJSON()">📋 Export JSON</button>
+                    </div>
+                </div>
             </div>
 
             <div class="driver-note">
                 <small>Please use your child's name when adding a driver - this represents anyone from your family who will be driving.<br>Use "bus" for school bus days or "uber" for rideshare days. Add notes to calendar days for additional details if needed.</small>
             </div>
-        </div>
+
+            <div class="month-nav month-nav-bottom">
+                <button class="nav-btn" onclick="changeMonth(-1)">← Previous</button>
+                <div class="current-month" id="currentMonth"></div>
+                <button class="nav-btn" onclick="changeMonth(1)">Next →</button>
+            </div>
+
+</div>
 
         <div class="calendar">
             <div class="calendar-grid" id="calendar"></div>
