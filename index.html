@@ -1,3 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Carpool Calendar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 10px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #4a5568;
+            margin-bottom: 5px;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1rem;
+        }
+
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 5px;
+            padding: 4px 6px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .connection-status.connected {
+            background: rgba(72, 187, 120, 0.1);
+            color: #38a169;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(229, 62, 62, 0.1);
+            color: #e53e3e;
+        }
+
+        .connection-status.loading {
+            background: rgba(237, 137, 54, 0.1);
+            color: #dd6b20;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .month-nav {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .nav-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            min-width: 70px;
+            border: none;
+            padding: 4px 6px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-btn:active {
+            transform: scale(0.95);
+        }
+
+        .current-month {
+            font-size: 1rem;
+            min-width: auto;
+            flex: 1;
+            text-align: center;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 700;
+        }
+
+        .driver-input {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-left: auto;
+        }
+
+        .driver-input input {
+            padding: 4px 6px;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+            min-height: 44px;
+        }
+
+        .driver-input input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .nav-btn.owner {
+            background: linear-gradient(135deg, #e53e3e, #c53030);
+        }
+
+        .export-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            width: 100%;
+            justify-content: center;
+            max-width: 100%;
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            flex: 1;
+            border: none;
+            padding: 4px 6px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            min-height: 44px;
+            touch-action: manipulation;
+            max-width: 160px;
+            flex-shrink: 0;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .driver-note {
+            width: 100%;
+            text-align: left;
+            margin-top: 10px;
+            padding: 4px 6px;
+            background: rgba(102, 126, 234, 0.08);
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+        }
+
+        .driver-note small {
+            color: #4a5568;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            font-style: italic;
+        }
+
+        .calendar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 10px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: 0.6fr 1.4fr 1.4fr 1.4fr 1.4fr 1.4fr 0.6fr;
+            gap: 3px;
+            margin-top: 20px;
+        }
+
+        .calendar-header {
+            background: linear-gradient(135deg, #4a5568, #2d3748);
+            color: white;
+            padding: 8px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: 1px;
+        }
+
+        .calendar-day {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            min-height: 140px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            touch-action: manipulation;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .calendar-day.weekend {
+            opacity: 0.7;
+        }
+
+        .calendar-day:hover {
+            background: #edf2f7;
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .calendar-day.other-month {
+            background: #f1f5f9;
+            color: #a0aec0;
+        }
+
+        .calendar-day.today {
+            background: linear-gradient(135deg, #f6ad55, #ed8936);
+            color: #2d3748;
+            border-color: #dd6b20;
+            font-weight: 600;
+        }
+
+        .calendar-day.today .day-number {
+            color: #2d3748;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .day-number {
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .drivers-list {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .driver-tag {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            padding: 4px 6px;
+            border-radius: 12px;
+            font-weight: 500;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            min-height: 24px;
+        }
+
+        .driver-tag:hover {
+            transform: scale(1.02);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .driver-tag.editable {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .driver-name {
+            width: 100%;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            line-height: 1.2;
+            margin-bottom: 2px;
+        }
+
+        .driver-actions {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            justify-content: flex-end;
+            width: 100%;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+            flex-shrink: 0;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .action-btn.remove:hover {
+            background: #e53e3e;
+        }
+
+        .add-driver-btn {
+            background: rgba(102, 126, 234, 0.1);
+            border: 2px dashed #667eea;
+            color: #667eea;
+            padding: 6px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+            margin-bottom: 4px;
+            touch-action: manipulation;
+        }
+
+        .add-driver-btn:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: scale(1.02);
+        }
+
+        .comments-display {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: 2px solid #5a67d8;
+            border-radius: 8px;
+            margin: 2px;
+            padding: 2px;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            margin-bottom: 4px;
+        }
+
+        .comments-display .comment-item {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 1px 2px;
+            margin: 1px 0;
+            border-radius: 3px;
+            word-wrap: break-word;
+            cursor: pointer;
+            line-height: 1.1;
+        }
+
+        .add-comment-btn {
+            background: transparent;
+            border: 1px dashed #667eea;
+            color: #667eea;
+            padding: 3px 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 2px;
+            touch-action: manipulation;
+            white-space: normal;
+            word-wrap: break-word;
+            line-height: 1.2;
+            text-align: center;
+            font-size: clamp(0.3rem, 2.5vw, 0.8rem);
+            font-weight: 600;
+        }
+
+        .add-comment-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .comments-section {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 6px;
+            background: transparent;
+            border: none;
+            margin: 0;
+        }
+
+        .calendar-day.weekend .comments-display {
+            margin: 1px;
+            padding: 1px;
+        }
+
+        .stats {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: scale(0.9) translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #4a5568;
+            text-align: center;
+        }
+
+        .modal input, .modal textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.8rem;
+            font-family: inherit;
+            min-height: 44px;
+        }
+
+        .modal textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+
+        .modal-btn.primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .modal-btn.secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .modal-btn.danger {
+            background: linear-gradient(135deg, #e53e3e, #c53030);
+            color: white;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .driver-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .driver-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .driver-item.current-user {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: #667eea;
+        }
+
+        .driver-name-modal {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .comment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .comment-item-full {
+            background: #f7fafc;
+            padding: 4px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 1rem;
+        }
+
+        .comment-time {
+            color: #718096;
+            font-size: 0.8rem;
+        }
+
+        .comment-text {
+            color: #2d3748;
+            line-height: 2;
+        }
+
+        .data-retention-info {
+            background: rgba(102, 126, 234, 0.1);
+            color: #4a5568;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            text-align: center;
+        }
+
+        /* MOBILE RESPONSIVE STYLES */
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .calendar {
+                width: 100%;
+                padding: 10px;
+                border-radius: 15px;
+            }
+
+            .header {
+                padding: 10px 10px;
+                margin-bottom: 10px;
+                border-radius: 15px;
+            }
+
+            .header h1 {
+            }
+
+            .header p {
+                margin-bottom: 10px;
+            }
+
+            .controls {
+                flex-direction: column;
+                text-align: center;
+                padding: 15px;
+                margin-bottom: 15px;
+                gap: 12px;
+                align-items: center;
+            }
+
+            .driver-note {
+                margin-top: 8px;
+                padding: 6px 10px;
+            }
+
+            .driver-note small {
+            }
+
+            .month-nav {
+                justify-content: center;
+                width: 100%;
+                max-width: 350px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .current-month {
+                min-width: auto;
+                font-weight: 700;
+                flex: 1;
+                text-align: center;
+                max-width: 150px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .driver-input {
+                margin-left: 0;
+                width: 100%;
+                max-width: 350px;
+                margin: 0 auto;
+                justify-content: center;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .driver-input input {
+                width: 100%;
+                max-width: 300px;
+                min-width: 200px;
+            }
+
+            .button-row {
+                display: flex;
+                gap: 8px;
+                justify-content: center;
+                width: 100%;
+            }
+
+            .button-row .nav-btn {
+                flex: 1;
+                max-width: 140px;
+                padding: 8px 6px;
+            }
+
+            .export-controls {
+                width: 100%;
+                justify-content: center;
+                max-width: 350px;
+            }
+
+            .export-btn {
+                flex: 1;
+                font-size: 0.75rem;
+                max-width: 120px;
+            }
+
+            .calendar-grid {
+                gap: 1px;
+                grid-template-columns: 0.4fr 1.2fr 1.2fr 1.2fr 1.2fr 1.2fr 0.4fr;
+                margin: 10px 0;
+                width: 100%;
+            }
+
+            .calendar-header {
+                padding: 4px 1px;
+            }
+
+            .calendar-day {
+                min-height: 110px;
+                padding: 2px;
+            }
+
+            .day-number {
+                margin-bottom: 2px;
+                text-align: center;
+                font-weight: 700;
+            }
+
+            .driver-tag {
+                padding: 2px 3px;
+                min-height: auto;
+                border-radius: 4px;
+                margin-bottom: 1px;
+                align-items: flex-start;
+            }
+
+            .driver-name {
+                line-height: 1.1;
+                font-size: 0.7rem;
+                word-break: break-word;
+            }
+
+            .driver-actions {
+                gap: 1px;
+                margin-left: 2px;
+                margin-top: 0px;
+            }
+
+            .action-btn {
+                width: 12px;
+                height: 12px;
+                font-size: 8px;
+            }
+
+            .add-driver-btn {
+                padding: 2px;
+                font-size: 0.5rem;
+                min-height: 14px;
+            }
+
+            .comments-section {
+                padding-top: 2px;
+            }
+
+            .comments-display .comment-item {
+                font-size: 0.6rem;
+                padding: 1px 2px;
+            }
+
+            .add-comment-btn {
+                padding: 1px 2px;
+                min-height: 10px;
+            }
+
+            .comment-badge {
+                width: 16px !important;
+                height: 16px !important;
+                top: 3px !important;
+                right: 3px !important;
+            }
+
+            .modal {
+                align-items: flex-start;
+                padding: 4px 6px;
+                overflow-y: auto;
+            }
+
+            .modal-content {
+                margin-top: 40px;
+                padding: 10px;
+                width: 100%;
+                max-width: 400px;
+            }
+
+            .nav-btn {
+                flex-shrink: 0;
+                min-width: 70px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .stat-card {
+                padding: 12px;
+            }
+
+            .stat-number {
+                font-size: 0.9rem;
+                margin-bottom: 3px;
+            }
+
+            .stat-label {
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 5px;
+            }
+
+            .calendar {
+                padding: 8px;
+            }
+
+            .calendar-grid {
+                grid-template-columns: 0.3fr 1.15fr 1.15fr 1.15fr 1.15fr 1.15fr 0.3fr;
+                gap: 1px;
+            }
+
+            .calendar-header {
+                padding: 3px 1px;
+            }
+
+            .calendar-day {
+                min-height: 100px;
+                padding: 2px;
+            }
+
+            .day-number {
+                margin-bottom: 2px;
+            }
+
+            .current-month {
+                max-width: 120px;
+            }
+
+            .driver-tag {
+                padding: 1px 2px;
+                font-size: 0.6rem;
+                min-height: auto;
+            }
+
+            .driver-name {
+                font-size: 0.6rem;
+                line-height: 1.1;
+            }
+
+            .action-btn {
+                width: 10px;
+                height: 10px;
+                font-size: 6px;
+            }
+
+            .add-driver-btn {
+                padding: 1px;
+                font-size: 0.45rem;
+                min-height: 12px;
+            }
+
+            .nav-btn {
+                padding: 6px 8px;
+                min-width: 60px;
+            }
+
+            .export-btn {
+                padding: 6px 8px;
+                max-width: 100px;
+            }
+
+            .comments-section {
+                font-size: 0.45rem;
+            }
+
+            .comments-display .comment-item {
+                font-size: 0.6rem;
+                padding: 1px 2px;
+            }
+
+            .add-comment-btn {
+                padding: 1px 2px;
+                min-height: 8px;
+            }
+
+            .comment-badge {
+                width: 14px !important;
+                height: 14px !important;
+                font-size: 0.5rem !important;
+                top: 2px !important;
+                right: 2px !important;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 5px;
+            }
+
+            .stat-card {
+                padding: 8px;
+            }
+
+            .stat-number {
+            }
+
+            .stat-label {
+            }
+        }
+
+        @media (max-width: 320px) {
+            .calendar-grid {
+                grid-template-columns: 0.25fr 1.12fr 1.12fr 1.12fr 1.12fr 1.12fr 0.25fr;
+                gap: 0.5px;
+            }
+
+            .calendar-header {
+                padding: 2px 0.5px;
+                font-size: 0.5rem;
+            }
+
+            .calendar-day {
+                min-height: 90px;
+                padding: 1px;
+            }
+
+            .current-month {
+                font-size: 0.8rem;
+                max-width: 100px;
+            }
+
+            .day-number {
+                font-size: 0.6rem;
+            }
+
+            .nav-btn {
+                padding: 6px 6px;
+                font-size: 0.6rem;
+                min-width: 50px;
+            }
+
+            .driver-tag {
+                padding: 1px 2px;
+                font-size: 0.5rem;
+                min-height: auto;
+            }
+
+            .driver-name {
+                font-size: 0.5rem;
+                line-height: 1.0;
+            }
+
+            .add-driver-btn {
+                padding: 1px;
+                font-size: 0.4rem;
+                min-height: 10px;
+            }
+
+            .action-btn {
+                width: 8px;
+                height: 8px;
+                font-size: 5px;
+            }
+
+            .comments-section {
+                font-size: 0.4rem;
+            }
+
+            .comments-display .comment-item {
+                font-size: 0.5rem;
+                padding: 1px 2px;
+            }
+
+            .add-comment-btn {
+                padding: 0.5px 1px;
+                min-height: 6px;
+            }
+        }
+
+        @media (hover: none) {
+            .calendar-day:hover {
+                background: #f7fafc;
+                border-color: #e2e8f0;
+                transform: none;
+                box-shadow: none;
+            }
+        }
+    
+.header,
+.controls,
+.calendar,
+.stats {
+    margin-bottom: 20px; /* equal spacing */
+
+    /* Equal vertical spacing on small screens */
+    .header,
+    .controls,
+    .calendar,
+    .stats {
+        margin-bottom: 16px !important;
+    }
+    .stats {
+        margin-bottom: 0 !important;
+    }
+    
+
+    /* Equal vertical spacing on small screens */
+    .header,
+    .controls,
+    .calendar,
+    .stats {
+        margin-bottom: 14px !important;
+    }
+    .stats {
+        margin-bottom: 0 !important;
+    }
+    
+
+    /* Equal vertical spacing on small screens */
+    .header,
+    .controls,
+    .calendar,
+    .stats {
+        margin-bottom: 12px !important;
+    }
+    .stats {
+        margin-bottom: 0 !important;
+    }
+    
+}
+
+.stats {
+    margin-bottom: 0; /* remove extra gap at the end */
+}
+
+
+/* Equal vertical spacing defaults */
+.header,
+.controls,
+.calendar,
+.stats {
+    margin-bottom: 20px;
+}
+.stats { margin-bottom: 0; }
+
 </style>
 </head>
 <body>
@@ -31,7 +1140,7 @@
             </div>
 
             <div class="driver-note">
-                <small>Please use your child's name when adding a driver - this represents anyone from your family who will be driving.<br>Use "bus" for school bus days or "uber" for rideshare days. Add comments to calendar days for additional details if needed.</small>
+                <small>Please use your child's name when adding a driver - this represents anyone from your family who will be driving.<br>Use "bus" for school bus days or "uber" for rideshare days. Add notes to calendar days for additional details if needed.</small>
             </div>
         </div>
 
@@ -67,7 +1176,7 @@
         <div class="modal-content">
             <h3>📅 <span id="detailsDate"></span></h3>
             
-            <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 10px;">
                 <h4 style="color: #4a5568; margin-bottom: 10px; font-size: 1.1rem;">👥 Drivers</h4>
                 <div class="driver-list" id="driverDetailsList"></div>
             </div>
@@ -412,7 +1521,7 @@
                         position: absolute;
                         top: 5px;
                         right: 5px;
-                        background: #e53e3e;
+                        background: rgba(229, 62, 62, 0.5);
                         color: white;
                         border-radius: 50%;
                         width: 20px;
@@ -491,21 +1600,20 @@
 
                 dayElement.appendChild(driversList);
 
-                const commentsSection = document.createElement('div');
-                commentsSection.className = 'comments-section';
-
+                // Create separate comments display area
                 if (dayData && dayData.comments && Array.isArray(dayData.comments) && dayData.comments.length > 0) {
-                    commentsSection.classList.add('has-comments');
+                    const commentsDisplay = document.createElement('div');
+                    commentsDisplay.className = 'comments-display';
 
                     dayData.comments.slice(0, 2).forEach(comment => {
                         const commentDiv = document.createElement('div');
                         commentDiv.className = 'comment-item';
-                        commentDiv.textContent = `${comment.author}: ${comment.text}`;
+                        commentDiv.textContent = `${comment.text} - ${comment.author}`;
                         commentDiv.onclick = (e) => {
                             e.stopPropagation();
                             openDayDetails(date);
                         };
-                        commentsSection.appendChild(commentDiv);
+                        commentsDisplay.appendChild(commentDiv);
                     });
                     
                     if (dayData.comments.length > 2) {
@@ -516,14 +1624,24 @@
                             e.stopPropagation();
                             openDayDetails(date);
                         };
-                        commentsSection.appendChild(moreComments);
+                        commentsDisplay.appendChild(moreComments);
                     }
+                    
+                    dayElement.appendChild(commentsDisplay);
                 }
+
+                // Create separate add note section
+                const commentsSection = document.createElement('div');
+                commentsSection.className = 'comments-section';
 
                 if (dayOfWeek !== 0 && dayOfWeek !== 6) {
                     const addCommentBtn = document.createElement('button');
                     addCommentBtn.className = 'add-comment-btn';
-                    addCommentBtn.textContent = '+ Comment';
+                    if (window.innerWidth <= 480) {
+                        addCommentBtn.innerHTML = '+<br>Note';
+                    } else {
+                        addCommentBtn.textContent = '+ Note';
+                    }
                     addCommentBtn.onclick = (e) => {
                         e.stopPropagation();
                         openDayDetails(date);
@@ -942,1067 +2060,3 @@
     </script>
 </body>
 </html>
-                <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Team Carpool Calendar</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-
-        .header h1 {
-            color: #4a5568;
-            margin-bottom: 10px;
-            font-size: 2rem;
-            font-weight: 700;
-        }
-
-        .header p {
-            color: #718096;
-            font-size: 1.1rem;
-        }
-
-        .connection-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 10px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        .connection-status.connected {
-            background: rgba(72, 187, 120, 0.1);
-            color: #38a169;
-        }
-
-        .connection-status.disconnected {
-            background: rgba(229, 62, 62, 0.1);
-            color: #e53e3e;
-        }
-
-        .connection-status.loading {
-            background: rgba(237, 137, 54, 0.1);
-            color: #dd6b20;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: currentColor;
-        }
-
-        .controls {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .month-nav {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .nav-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            font-size: 0.75rem;
-            flex-shrink: 0;
-            min-width: 70px;
-            border: none;
-            padding: 8px 10px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            min-height: 44px;
-            touch-action: manipulation;
-        }
-
-        .nav-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-        }
-
-        .nav-btn:active {
-            transform: scale(0.95);
-        }
-
-        .current-month {
-            font-size: 1.2rem;
-            min-width: auto;
-            flex: 1;
-            text-align: center;
-            max-width: 150px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            font-weight: 700;
-        }
-
-        .driver-input {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-left: auto;
-        }
-
-        .driver-input input {
-            padding: 12px 16px;
-            border: 2px solid #e2e8f0;
-            border-radius: 25px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: white;
-            min-height: 44px;
-        }
-
-        .driver-input input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .nav-btn.owner {
-            background: linear-gradient(135deg, #e53e3e, #c53030);
-        }
-
-        .export-controls {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            width: 100%;
-            justify-content: center;
-            max-width: 100%;
-        }
-
-        .export-btn {
-            background: linear-gradient(135deg, #48bb78, #38a169);
-            color: white;
-            flex: 1;
-            border: none;
-            padding: 8px 10px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.75rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-            min-height: 44px;
-            touch-action: manipulation;
-            max-width: 160px;
-            flex-shrink: 0;
-        }
-
-        .export-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .driver-note {
-            width: 100%;
-            text-align: center;
-            margin-top: 10px;
-            padding: 8px 15px;
-            background: rgba(102, 126, 234, 0.08);
-            border-radius: 8px;
-            border-left: 3px solid #667eea;
-        }
-
-        .driver-note small {
-            color: #4a5568;
-            font-size: 0.85rem;
-            line-height: 1.4;
-            font-style: italic;
-        }
-
-        .calendar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: 0.6fr 1.4fr 1.4fr 1.4fr 1.4fr 1.4fr 0.6fr;
-            gap: 3px;
-            margin-top: 20px;
-        }
-
-        .calendar-header {
-            background: linear-gradient(135deg, #4a5568, #2d3748);
-            color: white;
-            padding: 8px;
-            text-align: center;
-            font-weight: 700;
-            font-size: 0.8rem;
-            letter-spacing: 1px;
-        }
-
-        .calendar-day {
-            background: #f7fafc;
-            border: 2px solid #e2e8f0;
-            min-height: 140px;
-            padding: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            touch-action: manipulation;
-            min-width: 0;
-            overflow: hidden;
-        }
-
-        .calendar-day.weekend {
-            opacity: 0.7;
-        }
-
-        .calendar-day:hover {
-            background: #edf2f7;
-            border-color: #667eea;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .calendar-day.other-month {
-            background: #f1f5f9;
-            color: #a0aec0;
-        }
-
-        .calendar-day.today {
-            background: linear-gradient(135deg, #f6ad55, #ed8936);
-            color: #2d3748;
-            border-color: #dd6b20;
-            font-weight: 600;
-        }
-
-        .calendar-day.today .day-number {
-            color: #2d3748;
-            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-        }
-
-        .day-number {
-            font-weight: 700;
-            font-size: 1.1rem;
-            margin-bottom: 8px;
-            text-align: center;
-        }
-
-        .drivers-list {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            margin-bottom: 8px;
-        }
-
-        .driver-tag {
-            background: linear-gradient(135deg, #48bb78, #38a169);
-            color: white;
-            padding: 6px 10px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            position: relative;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .driver-tag:hover {
-            transform: scale(1.02);
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .driver-tag.editable {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-        }
-
-        .driver-name {
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .driver-actions {
-            display: flex;
-            gap: 4px;
-            align-items: center;
-            margin-left: 8px;
-        }
-
-        .action-btn {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            touch-action: manipulation;
-        }
-
-        .action-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.1);
-        }
-
-        .action-btn.remove:hover {
-            background: #e53e3e;
-        }
-
-        .add-driver-btn {
-            background: rgba(102, 126, 234, 0.1);
-            border: 2px dashed #667eea;
-            color: #667eea;
-            padding: 6px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s ease;
-            margin-bottom: 4px;
-            touch-action: manipulation;
-        }
-
-        .add-driver-btn:hover {
-            background: rgba(102, 126, 234, 0.2);
-            transform: scale(1.02);
-        }
-
-        .comment-item {
-            background: rgba(102, 126, 234, 0.1);
-            padding: 2px 4px;
-            margin: 1px 0;
-            border-radius: 3px;
-            word-wrap: break-word;
-            max-height: 32px;
-            overflow: hidden;
-            position: relative;
-            cursor: pointer;
-            -webkit-line-clamp: 2
-        }
-
-        .add-comment-btn {
-            background: transparent;
-            border: 1px dashed #667eea;
-            color: #667eea;
-            padding: 3px 6px;
-            border-radius: 6px;
-            font-size: 0.7rem;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 2px;
-            touch-action: manipulation;
-        }
-
-        .add-comment-btn:hover {
-            background: rgba(102, 126, 234, 0.1);
-        }
-
-        .comments-section {
-            border-top: 1px solid #e2e8f0;
-            padding-top: 6px;
-            font-size: 0.75rem;
-            background: transparent;
-            border: none;
-            margin: 0;
-        }
-
-        .comments-section.has-comments {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: 2px solid #5a67d8;
-            border-radius: 8px;
-            margin: 2px;
-            padding: 2px;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-            border-top: none;
-        }
-
-        .comments-section.has-comments .comment-item {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-        }
-
-        .comments-section.has-comments .add-comment-btn {
-            color: white;
-            border-color: white;
-        }
-
-        .calendar-day.weekend .comments-section.has-comments {
-            margin: 1px;
-            padding: 1px;
-        }
-
-        .stats {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            margin-top: 30px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
-
-        .stats h3 {
-            color: #4a5568;
-            margin-bottom: 15px;
-            font-size: 1rem;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .stat-number {
-            font-size: 1rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            opacity: 0.9;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
-            animation: modalSlideIn 0.3s ease;
-        }
-
-        @keyframes modalSlideIn {
-            from {
-                transform: scale(0.9) translateY(-20px);
-                opacity: 0;
-            }
-            to {
-                transform: scale(1) translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .modal h3 {
-            margin-bottom: 20px;
-            color: #4a5568;
-            text-align: center;
-        }
-
-        .modal input, .modal textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            font-size: 0.8rem;
-            font-family: inherit;
-            min-height: 44px;
-        }
-
-        .modal textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-        }
-
-        .modal-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            min-height: 44px;
-            touch-action: manipulation;
-        }
-
-        .modal-btn.primary {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-        }
-
-        .modal-btn.secondary {
-            background: #e2e8f0;
-            color: #4a5568;
-        }
-
-        .modal-btn.danger {
-            background: linear-gradient(135deg, #e53e3e, #c53030);
-            color: white;
-        }
-
-        .modal-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .driver-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .driver-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #f7fafc;
-            padding: 10px;
-            border-radius: 8px;
-            border: 2px solid #e2e8f0;
-        }
-
-        .driver-item.current-user {
-            background: rgba(102, 126, 234, 0.1);
-            border-color: #667eea;
-        }
-
-        .driver-name-modal {
-            font-weight: 600;
-            color: #4a5568;
-        }
-
-        .comment-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .comment-item-full {
-            background: #f7fafc;
-            padding: 10px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
-
-        .comment-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-
-        .comment-author {
-            font-weight: 600;
-            color: #4a5568;
-            font-size: 0.9rem;
-        }
-
-        .comment-time {
-            color: #718096;
-            font-size: 0.8rem;
-        }
-
-        .comment-text {
-            color: #2d3748;
-            font-size: 0.9rem;
-            line-height: 1.4;
-        }
-
-        .data-retention-info {
-            background: rgba(102, 126, 234, 0.1);
-            color: #4a5568;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 20px;
-            border: 1px solid rgba(102, 126, 234, 0.2);
-            font-size: 0.9rem;
-            text-align: center;
-        }
-
-        /* MOBILE RESPONSIVE STYLES */
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .calendar {
-                width: 100%;
-                padding: 10px;
-                border-radius: 15px;
-            }
-
-            .header {
-                padding: 20px 15px;
-                margin-bottom: 15px;
-                border-radius: 15px;
-            }
-
-            .header h1 {
-                font-size: 1.5rem;
-            }
-
-            .header p {
-                font-size: 0.9rem;
-                margin-bottom: 10px;
-            }
-
-            .controls {
-                flex-direction: column;
-                text-align: center;
-                padding: 15px;
-                margin-bottom: 15px;
-                gap: 12px;
-                align-items: center;
-            }
-
-            .driver-note {
-                margin-top: 8px;
-                padding: 6px 10px;
-            }
-
-            .driver-note small {
-                font-size: 0.75rem;
-            }
-
-            .month-nav {
-                justify-content: center;
-                width: 100%;
-                max-width: 350px;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-
-            .current-month {
-                font-size: 1rem;
-                min-width: auto;
-                font-weight: 700;
-                flex: 1;
-                text-align: center;
-                max-width: 150px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-
-            .driver-input {
-                margin-left: 0;
-                width: 100%;
-                max-width: 350px;
-                margin: 0 auto;
-                justify-content: center;
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            .driver-input input {
-                width: 100%;
-                max-width: 300px;
-                min-width: 200px;
-            }
-
-            .button-row {
-                display: flex;
-                gap: 8px;
-                justify-content: center;
-                width: 100%;
-            }
-
-            .button-row .nav-btn {
-                flex: 1;
-                max-width: 140px;
-                font-size: 0.65rem;
-                padding: 8px 6px;
-            }
-
-            .export-controls {
-                width: 100%;
-                justify-content: center;
-                max-width: 350px;
-            }
-
-            .export-btn {
-                flex: 1;
-                font-size: 0.75rem;
-                max-width: 120px;
-            }
-
-            .calendar-grid {
-                gap: 1px;
-                grid-template-columns: 0.4fr 1.2fr 1.2fr 1.2fr 1.2fr 1.2fr 0.4fr;
-                margin: 10px 0;
-                width: 100%;
-            }
-
-            .calendar-header {
-                padding: 4px 1px;
-                font-size: 0.6rem;
-            }
-
-            .calendar-day {
-                min-height: 90px;
-                padding: 2px;
-            }
-
-            .day-number {
-                font-size: 0.7rem;
-                margin-bottom: 2px;
-                text-align: center;
-                font-weight: 700;
-            }
-
-            .driver-tag {
-                padding: 2px 3px;
-                font-size: 0.65rem;
-                min-height: 12px;
-                border-radius: 4px;
-                margin-bottom: 1px;
-            }
-
-            .driver-actions {
-                gap: 1px;
-                margin-left: 2px;
-            }
-
-            .action-btn {
-                width: 10px;
-                height: 10px;
-                font-size: 6px;
-            }
-
-            .add-driver-btn {
-                padding: 2px;
-                font-size: 0.5rem;
-                min-height: 14px;
-            }
-
-            .comments-section {
-                padding-top: 2px;
-                font-size: 0.5rem;
-            }
-
-            .comment-item {
-                padding: 0px 1px;
-                margin: 1px 0;
-                border-radius: 3px;
-                max-height: 12px;
-                font-size: 0.45rem;
-                line-height: 1.1;
-            }
-
-            .add-comment-btn {
-                padding: 1px 2px;
-                font-size: 0.45rem;
-                min-height: 10px;
-            }
-
-            .comment-badge {
-                width: 16px !important;
-                height: 16px !important;
-                font-size: 0.6rem !important;
-                top: 3px !important;
-                right: 3px !important;
-            }
-
-            .modal {
-                align-items: flex-start;
-                padding: 20px 10px;
-                overflow-y: auto;
-            }
-
-            .modal-content {
-                margin-top: 40px;
-                padding: 20px;
-                width: 100%;
-                max-width: 400px;
-            }
-
-            .nav-btn {
-                padding: 8px 12px;
-                font-size: 0.7rem;
-                flex-shrink: 0;
-                min-width: 70px;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 8px;
-            }
-
-            .stat-card {
-                padding: 12px;
-            }
-
-            .stat-number {
-                font-size: 0.9rem;
-                margin-bottom: 3px;
-            }
-
-            .stat-label {
-                font-size: 0.7rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 5px;
-            }
-
-            .calendar {
-                padding: 8px;
-            }
-
-            .calendar-grid {
-                grid-template-columns: 0.3fr 1.15fr 1.15fr 1.15fr 1.15fr 1.15fr 0.3fr;
-                gap: 1px;
-            }
-
-            .calendar-header {
-                padding: 3px 1px;
-                font-size: 0.55rem;
-            }
-
-            .calendar-day {
-                min-height: 80px;
-                padding: 2px;
-            }
-
-            .day-number {
-                font-size: 0.65rem;
-                margin-bottom: 2px;
-            }
-
-            .current-month {
-                font-size: 0.9rem;
-                max-width: 120px;
-            }
-
-            .driver-tag {
-                padding: 1px 2px;
-                font-size: 0.6rem;
-                min-height: 10px;
-            }
-
-            .action-btn {
-                width: 8px;
-                height: 8px;
-                font-size: 5px;
-            }
-
-            .add-driver-btn {
-                padding: 1px;
-                font-size: 0.45rem;
-                min-height: 12px;
-            }
-
-            .nav-btn {
-                padding: 6px 8px;
-                font-size: 0.65rem;
-                min-width: 60px;
-            }
-
-            .export-btn {
-                font-size: 0.65rem;
-                padding: 6px 8px;
-                max-width: 100px;
-            }
-
-            .comments-section {
-                font-size: 0.45rem;
-            }
-
-            .comment-item {
-                padding: 0px 1px;
-                font-size: 0.4rem;
-                max-height: 10px;
-            }
-
-            .add-comment-btn {
-                font-size: 0.4rem;
-                padding: 1px 2px;
-                min-height: 8px;
-            }
-
-            .comment-badge {
-                width: 14px !important;
-                height: 14px !important;
-                font-size: 0.5rem !important;
-                top: 2px !important;
-                right: 2px !important;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 5px;
-            }
-
-            .stat-card {
-                padding: 8px;
-            }
-
-            .stat-number {
-                font-size: 0.8rem;
-            }
-
-            .stat-label {
-                font-size: 0.6rem;
-            }
-        }
-
-        @media (max-width: 320px) {
-            .calendar-grid {
-                grid-template-columns: 0.25fr 1.12fr 1.12fr 1.12fr 1.12fr 1.12fr 0.25fr;
-                gap: 0.5px;
-            }
-
-            .calendar-header {
-                padding: 2px 0.5px;
-                font-size: 0.5rem;
-            }
-
-            .calendar-day {
-                min-height: 70px;
-                padding: 1px;
-            }
-
-            .current-month {
-                font-size: 0.8rem;
-                max-width: 100px;
-            }
-
-            .day-number {
-                font-size: 0.6rem;
-            }
-
-            .nav-btn {
-                padding: 6px 6px;
-                font-size: 0.6rem;
-                min-width: 50px;
-            }
-
-            .driver-tag {
-                padding: 1px 2px;
-                font-size: 0.55rem;
-                min-height: 8px;
-            }
-
-            .add-driver-btn {
-                padding: 1px;
-                font-size: 0.4rem;
-                min-height: 10px;
-            }
-
-            .action-btn {
-                width: 6px;
-                height: 6px;
-                font-size: 4px;
-            }
-
-            .comments-section {
-                font-size: 0.4rem;
-            }
-
-            .comment-item {
-                padding: 0px 1px;
-                font-size: 0.35rem;
-                max-height: 8px;
-            }
-
-            .add-comment-btn {
-                font-size: 0.35rem;
-                padding: 0.5px 1px;
-                min-height: 6px;
-            }
-        }
-
-        @media (hover: none) {
-            .calendar-day:hover {
-                background: #f7fafc;
-                border-color: #e2e8f
