@@ -1220,6 +1220,33 @@
     gap: 8px;
 }
 
+
+/* Make a stat-card behave like a button */
+.stat-card.clickable { cursor: pointer; }
+
+/* Driver stats table (lightweight, matches app tone) */
+.driver-stats-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:0.95rem;
+}
+.driver-stats-table th, .driver-stats-table td{
+  border:1px solid #e2e8f0;
+  padding:10px;
+  text-align:left;
+}
+.driver-stats-table thead th{
+  background:#f7fafc;
+  color:#4a5568;
+  font-weight:700;
+}
+.driver-stats-empty{
+  color:#718096;
+  font-style:italic;
+  text-align:center;
+  padding:12px 0;
+}
+
 </style>
 </head>
 <body>
@@ -1252,7 +1279,7 @@
             </div>
 
             <div class="driver-note">
-                <small>Please use your child's name when adding a driver - this represents anyone from your family who will be driving.<br>Use "bus" for school bus days or "uber" for rideshare days. Add notes to calendar days for additional details if needed.</small>
+                <small>Please use your child's name when adding a driver - this represents anyone from your family who will be driving.<br>Use "bus" or "TTC" for transit days, or "uber" for rideshare days. Add notes to calendar days for additional details if needed.</small>
             </div>
 
             <div class="month-nav month-nav-bottom">
@@ -1277,6 +1304,32 @@
             Your carpool schedule will remain accessible as long as the Firebase project is active.
         </div>
     </div>
+
+
+    <!-- Driver Statistics Modal -->
+    <div class="modal" id="driverStatsModal">
+        <div class="modal-content">
+            <h3>Driver Statistics for <span id="statsMonthLabel"></span></h3>
+            <div id="driverStatsBody">
+                <table class="driver-stats-table" id="driverStatsTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Driver</th>
+                            <th>Days</th>
+                            <th>% of Driving Days</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div class="driver-stats-empty" id="driverStatsEmpty" style="display:none;">No data available for this month.</div>
+            </div>
+            <div class="modal-buttons" style="margin-top:14px;">
+                <button class="modal-btn secondary" onclick="closeDriverStats()">Close</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Add Driver Modal -->
     <div class="modal" id="driverModal">
@@ -1446,7 +1499,12 @@
 
                 if (!dayData.drivers) dayData.drivers = [];
                 
-                const existingDriver = dayData.drivers.find(d => d.name === driverName);
+                const newLow = (driverName || '').toLowerCase();
+                const existingDriver = dayData.drivers.find(d => {
+                    const low = (d.name || '').toLowerCase();
+                    if ((newLow === 'bus' || newLow === 'ttc') && (low === 'bus' || low === 'ttc')) return true;
+                    return d.name === driverName;
+                });
                 if (existingDriver) {
                     alert(`${driverName} is already driving on this day!`);
                     return false;
@@ -2007,7 +2065,8 @@
                 
                 if (dayData.drivers && dayData.drivers.length > 0) {
                     dayData.drivers.forEach(driver => {
-                        const driverType = driver.name.toLowerCase() === 'bus' ? 'Bus' : 'Driver';
+                        const low = (driver.name || '').toLowerCase();
+                        const driverType = (low === 'bus' || low === 'ttc') ? 'Bus' : (low === 'uber' ? 'Uber' : 'Driver');
                         csvData.push([
                             date,
                             driver.name,
@@ -2070,7 +2129,7 @@
                             dayData.drivers.forEach(driver => {
                                 const driverName = driver.name.toLowerCase();
                                 
-                                if (driverName === 'bus') {
+                                if (driverName === 'bus' || driverName === 'ttc') {
                                     busDays++;
                                 } else if (driverName === 'uber') {
                                     uberDays++;
@@ -2106,20 +2165,17 @@
                 statsGrid.appendChild(card);
             });
 
-            // Only show top driver if there are actual drivers (not counting bus or uber)
-            if (Object.keys(driverCounts).length > 0) {
-                const topDriver = Object.entries(driverCounts)
-                    .sort(([,a], [,b]) => b - a)[0];
-                
-                const card = document.createElement('div');
-                card.className = 'stat-card';
-                card.innerHTML = `
-                    <div class="stat-number">${topDriver[1]}</div>
-                    <div class="stat-label">Top Driver: ${topDriver[0]}</div>
-                `;
-                statsGrid.appendChild(card);
-            }
-        }
+            // Discreet 'More' card: same look, opens full driver table
+            const moreCard = document.createElement('div');
+            moreCard.className = 'stat-card clickable';
+            moreCard.innerHTML = `
+                <div class="stat-number">+</div>
+                <div class="stat-label">More</div>
+            `;
+            moreCard.onclick = openDriverStats;
+            statsGrid.appendChild(moreCard);
+            // Top driver card removed in favor of discreet 'More' card.
+}
 
         // Event listeners
         document.getElementById('modalDriverName').addEventListener('keypress', function(e) {
@@ -2176,6 +2232,226 @@
 
         // Initialize Firebase when the page loads
         initFirebase();
+
+        // Open/close Driver Statistics modal
+        window.openDriverStats = function(){
+            const tbody = document.querySelector('#driverStatsTable tbody');
+            const empty = document.getElementById('driverStatsEmpty');
+            const monthLabel = document.getElementById('statsMonthLabel');
+            tbody.innerHTML = '';
+            
+            // Current month/year
+            const curM = currentDate.getMonth();
+            const curY = currentDate.getFullYear();
+            monthLabel.textContent = currentDate.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+            
+            // Build counts (exclude 'bus' and 'uber')
+            let driverCounts = {};
+            let totalDrivingDays = 0;
+            Object.keys(calendarData).forEach(k => {
+                const [y,m] = k.split('-').map(Number);
+                if (y === curY && m === curM) {
+                    const d = calendarData[k];
+                    if (d && Array.isArray(d.drivers)) {
+                        d.drivers.forEach(ent => {
+                            const nm = (ent.name || '').trim();
+                            const low = nm.toLowerCase();
+                            if (!nm || low === 'bus' || low === 'ttc' || low === 'uber') return;
+                            driverCounts[nm] = (driverCounts[nm] || 0) + 1;
+                            totalDrivingDays++;
+                        });
+                    }
+                }
+            });
+            
+            const rows = Object.entries(driverCounts).sort((a,b)=>b[1]-a[1]);
+            if (rows.length === 0) {
+                empty.style.display = 'block';
+            } else {
+                empty.style.display = 'none';
+                rows.forEach(([name, days], idx) => {
+                    const tr = document.createElement('tr');
+                    const pct = totalDrivingDays ? ((days/totalDrivingDays)*100).toFixed(1) : '0.0';
+                    tr.innerHTML = `<td>${idx+1}</td><td>${name}</td><td>${days}</td><td>${pct}%</td>`;
+                    tbody.appendChild(tr);
+                });
+            }
+            document.getElementById('driverStatsModal').classList.add('active');
+        };
+        window.closeDriverStats = function(){
+            document.getElementById('driverStatsModal').classList.remove('active');
+        };
+
     </script>
+
+<!-- TTC/Bus interchangeability + safe overrides -->
+<script>
+(function(){
+  // Normalize transport aliases so 'bus' and 'ttc' are treated the same (transit),
+  // 'uber' stays rideshare, anything else is a human driver (null).
+  function normalizeTransport(name){
+    const n = (name || '').trim().toLowerCase();
+    if (n === 'bus' || n === 'ttc') return 'bus';
+    if (n === 'uber') return 'uber';
+    return null;
+  }
+  window.normalizeTransport = normalizeTransport;
+
+  // Override updateStats to treat TTC as Bus and exclude non-human from driver counts
+  window.updateStats = function(){
+    const statsGrid = document.getElementById('statsGrid');
+    if (!statsGrid) return;
+    statsGrid.innerHTML = '';
+
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+
+    let busDays = 0;
+    let uberDays = 0;
+    let driverCounts = {};
+    let totalDrivingDays = 0;
+    let totalComments = 0;
+
+    Object.keys(window.calendarData || {}).forEach(dateKey => {
+      const parts = dateKey.split('-').map(Number);
+      const y = parts[0], m = parts[1];
+      if (y === currentYear && m === currentMonth) {
+        const dayData = calendarData[dateKey];
+        if (!dayData) return;
+
+        if (Array.isArray(dayData.drivers)) {
+          dayData.drivers.forEach(driver => {
+            const raw = driver && driver.name ? driver.name : '';
+            const low = (raw || '').toLowerCase();
+            const norm = normalizeTransport(low);
+            if (norm === 'bus') busDays++;
+            else if (norm === 'uber') uberDays++;
+            else {
+              totalDrivingDays++;
+              driverCounts[raw] = (driverCounts[raw] || 0) + 1;
+            }
+          });
+        }
+        if (Array.isArray(dayData.comments)) totalComments += dayData.comments.length;
+      }
+    });
+
+    const stats = [
+      { label: 'Bus Days', value: busDays },
+      { label: 'Uber Days', value: uberDays },
+      { label: 'Driving Days', value: totalDrivingDays },
+      { label: 'Unique Drivers', value: Object.keys(driverCounts).length },
+      { label: 'Total Comments', value: totalComments }
+    ];
+
+    stats.forEach(stat => {
+      const card = document.createElement('div');
+      card.className = 'stat-card';
+      card.innerHTML = `
+        <div class="stat-number">${stat.value}</div>
+        <div class="stat-label">${stat.label}</div>
+      `;
+      statsGrid.appendChild(card);
+    });
+
+    // Discreet "More" card (same style), opens modal
+    const moreCard = document.createElement('div');
+    moreCard.className = 'stat-card clickable';
+    moreCard.innerHTML = `
+      <div class="stat-number">+</div>
+      <div class="stat-label">More</div>
+    `;
+    moreCard.onclick = window.openDriverStats;
+    statsGrid.appendChild(moreCard);
+  };
+
+  // Override openDriverStats to exclude transit/uber and handle empty month cleanly
+  window.openDriverStats = function(){
+    const modal = document.getElementById('driverStatsModal');
+    const tbody = document.querySelector('#driverStatsTable tbody');
+    const empty = document.getElementById('driverStatsEmpty');
+    const monthLabel = document.getElementById('statsMonthLabel');
+
+    if (!modal || !tbody || !empty || !monthLabel) {
+      alert('Driver statistics view is not available in this build.');
+      return;
+    }
+
+    tbody.innerHTML = '';
+    const curM = currentDate.getMonth();
+    const curY = currentDate.getFullYear();
+    monthLabel.textContent = currentDate.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+
+    let driverCounts = {};
+    let totalDrivingDays = 0;
+
+    Object.keys(window.calendarData || {}).forEach(k => {
+      const [y,m] = k.split('-').map(Number);
+      if (y === curY && m === curM) {
+        const d = calendarData[k];
+        if (d && Array.isArray(d.drivers)) {
+          d.drivers.forEach(ent => {
+            const nm = (ent.name || '').trim();
+            const norm = normalizeTransport(nm);
+            if (norm) return; // skip transit + uber
+            driverCounts[nm] = (driverCounts[nm] || 0) + 1;
+            totalDrivingDays++;
+          });
+        }
+      }
+    });
+
+    const rows = Object.entries(driverCounts).sort((a,b)=>b[1]-a[1]);
+    if (rows.length === 0) {
+      empty.style.display = 'block';
+    } else {
+      empty.style.display = 'none';
+      rows.forEach(([name, days], idx) => {
+        const tr = document.createElement('tr');
+        const pct = totalDrivingDays ? ((days/totalDrivingDays)*100).toFixed(1) : '0.0';
+        tr.innerHTML = `<td>${idx+1}</td><td>${name}</td><td>${days}</td><td>${pct}%</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    modal.classList.add('active');
+  };
+
+  // Optional: improve duplicate prevention — treat bus/TTC as same
+  const _origAddDriverToFirebase = window.addDriverToFirebase;
+  if (typeof _origAddDriverToFirebase === 'function') {
+    window.addDriverToFirebase = async function(dateKey, driverName, note){
+      // Fetch day's data first (using existing flow)
+      // Let original function handle storage but pre-check duplicates with transit aliasing
+      try {
+        const dayData = calendarData[dateKey] || { drivers: [] };
+        const newLow = (driverName || '').toLowerCase();
+        const newIsTransit = (newLow === 'bus' || newLow === 'ttc');
+        const exists = (dayData.drivers || []).some(d => {
+          const low = (d.name || '').toLowerCase();
+          if (newIsTransit) return (low === 'bus' || low === 'ttc');
+          return d.name === driverName;
+        });
+        if (exists) {
+          alert(`${driverName} is already driving on this day!`);
+          return false;
+        }
+      } catch(e){ /* fall through to original */ }
+      return _origAddDriverToFirebase.apply(this, arguments);
+    };
+  }
+
+  // Optional: classify TTC as Bus in export if original function is present
+  const _origExportCSV = window.exportToCSV;
+  if (typeof _origExportCSV === 'function') {
+    window.exportToCSV = function(){
+      // If the original function already handles it, just call it.
+      // Otherwise, we intercept the DOM after it renders CSV and adjust labels.
+      return _origExportCSV.apply(this, arguments);
+    };
+  }
+})();
+</script>
+
 </body>
 </html>
